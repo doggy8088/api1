@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using api1.Models;
 
 namespace api1.Controllers
@@ -14,16 +15,19 @@ namespace api1.Controllers
     public class CoursesController : ControllerBase
     {
         private readonly ContosoUniversityContext _context;
+        private readonly ILogger<CoursesController> _logger;
 
-        public CoursesController(ContosoUniversityContext context)
+        public CoursesController(ContosoUniversityContext context, ILogger<CoursesController> logger)
         {
             _context = context;
+            _logger = logger;
         }
 
         // GET: api/Courses
         [HttpGet]
         public async Task<ActionResult<IEnumerable<Course>>> GetCourses()
         {
+            _logger.LogInformation("Getting all courses");
             return await _context.Courses.ToListAsync();
         }
 
@@ -31,10 +35,12 @@ namespace api1.Controllers
         [HttpGet("{id}")]
         public async Task<ActionResult<Course>> GetCourse(int id)
         {
+            _logger.LogInformation("Getting course with id {Id}", id);
             var course = await _context.Courses.FindAsync(id);
 
             if (course == null)
             {
+                _logger.LogWarning("Course with id {Id} not found", id);
                 return NotFound();
             }
 
@@ -48,9 +54,11 @@ namespace api1.Controllers
         {
             if (id != course.CourseId)
             {
+                _logger.LogWarning("Course id {Id} does not match", id);
                 return BadRequest();
             }
 
+            _logger.LogInformation("Updating course with id {Id}", id);
             _context.Entry(course).State = EntityState.Modified;
 
             try
@@ -61,10 +69,12 @@ namespace api1.Controllers
             {
                 if (!CourseExists(id))
                 {
+                    _logger.LogWarning("Course with id {Id} not found during update", id);
                     return NotFound();
                 }
                 else
                 {
+                    _logger.LogError("Concurrency error while updating course with id {Id}", id);
                     throw;
                 }
             }
@@ -77,6 +87,7 @@ namespace api1.Controllers
         [HttpPost]
         public async Task<ActionResult<Course>> PostCourse(Course course)
         {
+            _logger.LogInformation("Creating new course");
             _context.Courses.Add(course);
             await _context.SaveChangesAsync();
 
@@ -87,9 +98,11 @@ namespace api1.Controllers
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteCourse(int id)
         {
+            _logger.LogInformation("Deleting course with id {Id}", id);
             var course = await _context.Courses.FindAsync(id);
             if (course == null)
             {
+                _logger.LogWarning("Course with id {Id} not found", id);
                 return NotFound();
             }
 

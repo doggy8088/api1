@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using api1.Models;
 
 namespace api1.Controllers
@@ -14,16 +15,19 @@ namespace api1.Controllers
     public class DepartmentsController : ControllerBase
     {
         private readonly ContosoUniversityContext _context;
+        private readonly ILogger<DepartmentsController> _logger;
 
-        public DepartmentsController(ContosoUniversityContext context)
+        public DepartmentsController(ContosoUniversityContext context, ILogger<DepartmentsController> logger)
         {
             _context = context;
+            _logger = logger;
         }
 
         // GET: api/Departments
         [HttpGet]
         public async Task<ActionResult<IEnumerable<Department>>> GetDepartments()
         {
+            _logger.LogInformation("Getting all departments");
             return await _context.Departments.ToListAsync();
         }
 
@@ -31,10 +35,12 @@ namespace api1.Controllers
         [HttpGet("{id}")]
         public async Task<ActionResult<Department>> GetDepartment(int id)
         {
+            _logger.LogInformation("Getting department with id {Id}", id);
             var department = await _context.Departments.FindAsync(id);
 
             if (department == null)
             {
+                _logger.LogWarning("Department with id {Id} not found", id);
                 return NotFound();
             }
 
@@ -42,15 +48,16 @@ namespace api1.Controllers
         }
 
         // PUT: api/Departments/5
-        // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
         [HttpPut("{id}")]
         public async Task<IActionResult> PutDepartment(int id, Department department)
         {
             if (id != department.DepartmentId)
             {
+                _logger.LogWarning("Department id {Id} does not match", id);
                 return BadRequest();
             }
 
+            _logger.LogInformation("Updating department with id {Id}", id);
             _context.Entry(department).State = EntityState.Modified;
 
             try
@@ -61,10 +68,12 @@ namespace api1.Controllers
             {
                 if (!DepartmentExists(id))
                 {
+                    _logger.LogWarning("Department with id {Id} not found during update", id);
                     return NotFound();
                 }
                 else
                 {
+                    _logger.LogError("Concurrency error while updating department with id {Id}", id);
                     throw;
                 }
             }
@@ -73,10 +82,10 @@ namespace api1.Controllers
         }
 
         // POST: api/Departments
-        // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
         [HttpPost]
         public async Task<ActionResult<Department>> PostDepartment(Department department)
         {
+            _logger.LogInformation("Creating new department");
             _context.Departments.Add(department);
             await _context.SaveChangesAsync();
 
@@ -87,9 +96,11 @@ namespace api1.Controllers
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteDepartment(int id)
         {
+            _logger.LogInformation("Deleting department with id {Id}", id);
             var department = await _context.Departments.FindAsync(id);
             if (department == null)
             {
+                _logger.LogWarning("Department with id {Id} not found", id);
                 return NotFound();
             }
 
